@@ -12,18 +12,6 @@ El objetivo del laboratorio es diseñar una política que maximice el desempeño
 - numpy < 2
 - matplotlib
 
-Instalación recomendada en entorno virtual:
-
-```bash
-python -m venv .venv2048
-source .venv2048/bin/activate  # Linux/Mac
-# o
-.\.venv2048\Scripts\Activate.ps1  # Windows
-
-pip install "numpy<2" matplotlib
-```
-
----
 
 ## ▶️ Cómo ejecutar
 
