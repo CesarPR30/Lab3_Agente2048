@@ -41,14 +41,8 @@ class Agent:
         return best_a
 
     def _expectimax(self, board: np.ndarray, depth: int, size: int) -> float:
-        # depth alterna: max-node (jugador) -> chance-node (spawn) -> max-node...
-        # aquí implementamos: después del move del jugador, viene chance spawn.
         key = _pack(board)
         return _exp_cached(key, depth, size, self.sample_chance)
-
-# -----------------------------
-# Expectimax + cache global
-# -----------------------------
 
 def _unpack(packed: Tuple[int, ...], size: int) -> np.ndarray:
     arr = np.array(packed, dtype=np.int64).reshape(size, size)
@@ -61,20 +55,15 @@ def _pack(board: np.ndarray) -> Tuple[int, ...]:
 def _exp_cached(packed: Tuple[int, ...], depth: int, size: int, sample_chance: int) -> float:
     board = _unpack(packed, size)
 
-    # Terminal / cutoff
     if depth <= 0:
         return _heuristic(board)
 
     empties = np.argwhere(board == 0)
     if empties.size == 0:
-        # sin vacíos, no hay spawn: volvemos a max node
         return _max_node(board, depth, size, sample_chance)
-
-    # Chance node: spawnea 2 (p=0.9) o 4 (p=0.1) en una celda vacía
-    # Para acelerar: muestreamos algunas celdas vacías si hay demasiadas
+    
     n_empty = len(empties)
     if n_empty > sample_chance:
-        # muestreo determinista (subconjunto estable) para reproducibilidad
         idxs = np.linspace(0, n_empty - 1, sample_chance).astype(int)
         empties = empties[idxs]
         n_empty = len(empties)
@@ -83,11 +72,9 @@ def _exp_cached(packed: Tuple[int, ...], depth: int, size: int, sample_chance: i
     val = 0.0
 
     for (r, c) in empties:
-        # spawn 2
         b2 = board.copy()
         b2[r, c] = 2
         val += p_cell * 0.9 * _max_node(b2, depth - 1, size, sample_chance)
-        # spawn 4
         b4 = board.copy()
         b4[r, c] = 4
         val += p_cell * 0.1 * _max_node(b4, depth - 1, size, sample_chance)
@@ -95,7 +82,6 @@ def _exp_cached(packed: Tuple[int, ...], depth: int, size: int, sample_chance: i
     return val
 
 def _max_node(board: np.ndarray, depth: int, size: int, sample_chance: int) -> float:
-    # max node: el jugador elige la mejor acción
     best = -1e18
     any_moved = False
     for a in ("up", "down", "left", "right"):
@@ -107,14 +93,10 @@ def _max_node(board: np.ndarray, depth: int, size: int, sample_chance: int) -> f
         if v > best:
             best = v
 
-    # si no hay movimientos, estado terminal
     if not any_moved:
         return _heuristic(board) - 1e6
     return best
 
-# -----------------------------
-# Movimiento 2048 (simulador local)
-# -----------------------------
 
 def _apply_move(board: np.ndarray, action: Action) -> Tuple[np.ndarray, bool, float]:
     b = board.copy()
@@ -133,7 +115,6 @@ def _apply_move(board: np.ndarray, action: Action) -> Tuple[np.ndarray, bool, fl
     return nb, moved, float(reward)
 
 def _compress_and_merge_row(row: np.ndarray) -> Tuple[np.ndarray, int]:
-    # quita ceros
     tiles = row[row != 0].tolist()
     merged = []
     reward = 0
@@ -147,7 +128,6 @@ def _compress_and_merge_row(row: np.ndarray) -> Tuple[np.ndarray, int]:
         else:
             merged.append(tiles[i])
             i += 1
-    # rellena ceros
     merged += [0] * (len(row) - len(merged))
     return np.array(merged, dtype=np.int64), reward
 
@@ -176,29 +156,20 @@ def _move_down(board: np.ndarray) -> Tuple[np.ndarray, int]:
     moved, reward = _move_right(tr)
     return moved.T, reward
 
-# -----------------------------
-# Heurística
-# -----------------------------
 
 def _heuristic(board: np.ndarray) -> float:
-    # Componentes típicos:
-    # - muchos vacíos (super importante)
-    # - suavidad (penaliza saltos grandes)
-    # - monotonía (premia filas/cols ordenadas)
-    # - max tile en esquina
-    # - max tile grande
     b = board.astype(np.float64)
     empty = float(np.sum(b == 0))
 
     max_tile = float(b.max()) if b.size else 0.0
     log_max = math.log2(max_tile) if max_tile > 0 else 0.0
 
-    smooth = -_smoothness(b)          # queremos minimizar diferencias
-    mono = _monotonicity(b)           # queremos alto
-    # corner = 1.0 if b[0,0] == b.max() and b.max() > 0 else 0.0
+    smooth = -_smoothness(b)          
+    mono = _monotonicity(b)       
+
     snake = _snake_weight(b)
     corner = _corner_bonus_fixed(b)
-    # Pesos (ajustables)
+
     return (
         6.0 * empty +
         2.0 * smooth +
@@ -209,7 +180,6 @@ def _heuristic(board: np.ndarray) -> float:
     )
 
 def _smoothness(b: np.ndarray) -> float:
-    # suma de |log2(tile_i) - log2(tile_j)| en vecinos (ignorando ceros)
     size = b.shape[0]
     def l2(x):
         return math.log2(x) if x > 0 else 0.0
@@ -228,7 +198,6 @@ def _smoothness(b: np.ndarray) -> float:
     return s
 
 def _monotonicity(b: np.ndarray) -> float:
-    # premia que filas/cols sean (aprox) decrecientes o crecientes
     size = b.shape[0]
     def logs(arr):
         out = np.zeros_like(arr, dtype=np.float64)
@@ -237,13 +206,11 @@ def _monotonicity(b: np.ndarray) -> float:
         return out
 
     score = 0.0
-    # filas
     for r in range(size):
         row = logs(b[r, :])
         inc = np.sum(np.maximum(0.0, row[1:] - row[:-1]))
         dec = np.sum(np.maximum(0.0, row[:-1] - row[1:]))
         score += max(inc, dec)
-    # cols
     for c in range(size):
         col = logs(b[:, c])
         inc = np.sum(np.maximum(0.0, col[1:] - col[:-1]))
@@ -258,7 +225,6 @@ def _max_in_corner(b: np.ndarray) -> float:
     return 1.0 if any(x == m for x in corners) and m > 0 else 0.0
 
 def _snake_weight(b: np.ndarray) -> float:
-    # pesos tipo "snake" (máximo en esquina superior-izq)
     W = np.array([
         [65536, 32768, 16384,  8192],
         [  512,  1024,  2048,  4096],
@@ -266,7 +232,6 @@ def _snake_weight(b: np.ndarray) -> float:
         [    2,     4,     8,    16],
     ], dtype=np.float64)
 
-    # Usa log2 para que no explote con valores grandes
     x = b.copy().astype(np.float64)
     nz = x > 0
     x[nz] = np.log2(x[nz])
