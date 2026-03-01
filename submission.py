@@ -1,4 +1,3 @@
-# solucion.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,14 +7,14 @@ import math
 import numpy as np
 
 
-Action = str  # "up", "down", "left", "right"
+Action = str  
 OPP = {"up":"down","down":"up","left":"right","right":"left"}
 
 @dataclass
 class Agent:
     seed: int | None = None
-    depth: int = 3
-    sample_chance: int = 4
+    depth: int = 2
+    sample_chance: int = 3
     last_action: str | None = None
 
     def act(self, board, legal_actions) -> str:
@@ -25,7 +24,6 @@ class Agent:
         best_v = -1e18
 
         for a in legal_actions:
-            # penaliza el opuesto inmediato
             backtrack_pen = 0.15 if (self.last_action and a == OPP.get(self.last_action)) else 0.0
 
             nb, moved, reward = _apply_move(b, a)
@@ -218,11 +216,6 @@ def _monotonicity(b: np.ndarray) -> float:
         score += max(inc, dec)
 
     return score
-
-def _max_in_corner(b: np.ndarray) -> float:
-    m = b.max()
-    corners = [b[0,0], b[0,-1], b[-1,0], b[-1,-1]]
-    return 1.0 if any(x == m for x in corners) and m > 0 else 0.0
 
 def _snake_weight(b: np.ndarray) -> float:
     W = np.array([
