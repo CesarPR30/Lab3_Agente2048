@@ -26,40 +26,10 @@ python run_2048.py --mode manual
 
 ### 🤖 Modo agente
 
-Asumiendo que la solución está en `solucion.py`:
+Asumiendo que la solución está en `submission.py`:
 
 ```bash
-python run_2048.py --mode agent --agent-module solucion --agent-class Agent --episodes 50
-```
-
----
-
-## 📊 Evaluación oficial
-
-El laboratorio usa `evaluation.py`:
-
-```python
-final_score = 1000 * mean_log_score \
-            + 30 * mean_log2_max_tile \
-            + 10 * median_log_score \
-            - 2 * mean_log_steps
-```
-
-Donde:
-
-- `mean_log_score = mean(log(1 + score))`
-- `mean_log2_max_tile = mean(log2(max_tile))`
-- `mean_log_steps = mean(log(1 + steps))`
-
-Para evaluación local:
-
-```python
-from evaluation import evaluate_agent_scalar
-from solucion import Agent
-
-seeds = [0] #list(range(50))
-agent = Agent()
-print(evaluate_agent_scalar(agent, seeds))
+python eval_student.py --agent-module submission --episodes 5
 ```
 
 ---
@@ -79,10 +49,10 @@ Cumple con la restricción de máximo 5GB en inferencia.
 
 ```
 .
-├── solucion.py          # Implementación del agente
+├── submission.py          # Implementación del agente
 ├── run_2048.py          # Runner (manual y agente)
 ├── evaluation.py        # Evaluación oficial
-├── eval_local.py        # Evaluación local
+├── eval_student.py        # Evaluación local
 ├── game_2048.py         # Lógica del juego
 ├── viz_2048.py          # Renderizado
 ```
